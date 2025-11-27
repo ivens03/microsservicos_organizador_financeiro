@@ -2,6 +2,8 @@ package com.organizador.financeiros.spring.usuario.controller;
 
 import com.organizador.financeiros.spring.usuario.dto.UsuarioCltRequestDto;
 import com.organizador.financeiros.spring.usuario.dto.UsuarioCltResponseDto;
+import com.organizador.financeiros.spring.usuario.dto.validation.OnCreate;
+import com.organizador.financeiros.spring.usuario.dto.validation.OnUpdate;
 import com.organizador.financeiros.spring.usuario.service.UsuarioCltService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.Parameter;
@@ -12,6 +14,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.validation.annotation.Validated;
 import org.springframework.web.bind.annotation.*;
 
 @Slf4j
@@ -27,7 +30,7 @@ public class UsuarioCltController {
     @ApiResponse(responseCode = "201", description = "Created")
     @ApiResponse(responseCode = "400", description = "Bad Request - Dados inválidos ou duplicados")
     @PostMapping
-    public ResponseEntity<UsuarioCltResponseDto> criar(@Valid @RequestBody UsuarioCltRequestDto dto) {
+    public ResponseEntity<UsuarioCltResponseDto> criar(@Validated(OnCreate.class) @RequestBody UsuarioCltRequestDto dto) {
         log.info("Requisição recebida para criar Usuario CLT.");
         UsuarioCltResponseDto response = usuarioCltService.criar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
@@ -39,7 +42,7 @@ public class UsuarioCltController {
     @PatchMapping("/{id}")
     public ResponseEntity<UsuarioCltResponseDto> editar(
             @Parameter(description = "ID do usuário") @PathVariable Long id,
-            @Valid @RequestBody UsuarioCltRequestDto dto) {
+            @Validated(OnUpdate.class) @RequestBody UsuarioCltRequestDto dto) {
         log.info("Requisição recebida para editar Usuario CLT ID: {}", id);
         return ResponseEntity.ok(usuarioCltService.editar(id, dto));
     }
@@ -67,10 +70,10 @@ public class UsuarioCltController {
     @ApiResponse(responseCode = "200", description = "OK")
     @ApiResponse(responseCode = "404", description = "Not Found - Usuário não encontrado")
     @GetMapping("/{id}")
-    public ResponseEntity<UsuarioCltResponseDto> buscarPorId(
+    public ResponseEntity<UsuarioCltResponseDto> buscarPorIdAtivo(
             @Parameter(description = "ID do usuário") @PathVariable Long id) {
         log.info("Requisição recebida para buscar Usuario CLT ID: {}", id);
-        UsuarioCltResponseDto response = usuarioCltService.buscarPorId(id);
+        UsuarioCltResponseDto response = usuarioCltService.buscarPorIdAtivo(id);
         return ResponseEntity.ok(response);
     }
 }

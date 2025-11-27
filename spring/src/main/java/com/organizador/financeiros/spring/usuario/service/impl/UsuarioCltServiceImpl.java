@@ -48,9 +48,8 @@ public class UsuarioCltServiceImpl implements UsuarioCltService {
 
         Usuario usuario = usuarioMapper.toEntity(dto.getUsuario());
         usuario.setSenha(passwordEncoder.encode(dto.getUsuario().getSenha()));
-        usuario.setAtivo(true);
-        usuario.setTipoUsuario(TipoUsuarioEnum.CLT);
         usuario.setCriadoEm(LocalDateTime.now());
+        usuario.setTipoUsuario(TipoUsuarioEnum.CLT);
 
         UsuarioClt usuarioClt = usuarioCltMapper.toEntity(dto);
         usuarioClt.setUsuario(usuario);
@@ -71,26 +70,56 @@ public class UsuarioCltServiceImpl implements UsuarioCltService {
     }
 
     @Override
+    @Transactional(readOnly = true)
+    public UsuarioCltResponseDto buscarPorIdAtivo(Long id) {
+        log.debug("Buscando Usuário CLT Ativo por ID: {}", id);
+        UsuarioClt usuarioClt = usuarioCltRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Usuário CLT não encontrado com ID: " + id));
+
+        if (Boolean.FALSE.equals(usuarioClt.getUsuario().getAtivo())) {
+            log.warn("Tentativa de acesso a usuário inativo. ID: {}", id);
+            throw new ResourceNotFoundException("Usuário CLT não encontrado ou inativo. ID: " + id);
+        }
+
+        return usuarioCltMapper.toResponseDto(usuarioClt);
+    }
+
+    @Override
     @Transactional
     public UsuarioCltResponseDto editar(Long id, UsuarioCltRequestDto dto) {
-        log.info("Atualizando Usuário CLT. ID: {}", id);
+        log.info("Iniciando processo de edição parcial (PATCH) para Usuário CLT ID: {}", id);
 
         UsuarioClt usuarioClt = usuarioCltRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário CLT não encontrado para edição."));
 
-        if (!usuarioClt.getUsuario().getEmail().equals(dto.getUsuario().getEmail()) &&
-                usuarioRepository.existsByEmail(dto.getUsuario().getEmail())) {
-            throw new BadRequestException("Novo email já está em uso.");
+        if (Boolean.FALSE.equals(usuarioClt.getUsuario().getAtivo())) {
+            log.warn("Bloqueio de edição: Usuário ID {} está inativo.", id);
+            throw new BadRequestException("Não é permitido editar um usuário inativo. Ative-o primeiro.");
         }
 
+        if (dto.getUsuario() != null && dto.getUsuario().getEmail() != null) {
+            String novoEmail = dto.getUsuario().getEmail();
+            String emailAtual = usuarioClt.getUsuario().getEmail();
+
+            if (!novoEmail.equals(emailAtual) && usuarioRepository.existsByEmail(novoEmail)) {
+                log.warn("Conflito de dados: Email {} já existe.", novoEmail);
+                throw new BadRequestException("Novo email já está em uso.");
+            }
+        }
+
+        log.debug("Aplicando alterações parciais na entidade via Mapper.");
         usuarioCltMapper.updateEntityFromDto(dto, usuarioClt);
 
-        if (dto.getUsuario().getSenha() != null && !dto.getUsuario().getSenha().isBlank()) {
+        if (dto.getUsuario() != null &&
+                dto.getUsuario().getSenha() != null &&
+                !dto.getUsuario().getSenha().isBlank()) {
+
+            log.info("Atualizando senha do usuário ID: {}", id);
             usuarioClt.getUsuario().setSenha(passwordEncoder.encode(dto.getUsuario().getSenha()));
         }
 
         UsuarioClt atualizado = usuarioCltRepository.save(usuarioClt);
-        log.info("Usuário CLT atualizado com sucesso.");
+        log.info("Edição concluída com sucesso para Usuário CLT ID: {}", id);
         return usuarioCltMapper.toResponseDto(atualizado);
     }
 
