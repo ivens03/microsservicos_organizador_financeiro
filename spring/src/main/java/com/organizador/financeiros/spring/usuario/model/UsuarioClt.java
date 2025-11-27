@@ -27,9 +27,6 @@ public class UsuarioClt implements Serializable {
     @Column(name = "salario_mensal", nullable = false, precision = 19, scale = 2)
     private BigDecimal salarioMensal;
 
-    @Column(nullable = false)
-    private Byte idade;
-
     @Column(nullable = false, unique = true, length = 14)
     private String cpf;
 

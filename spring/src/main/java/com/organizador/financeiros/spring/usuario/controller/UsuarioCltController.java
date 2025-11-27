@@ -58,8 +58,19 @@ public class UsuarioCltController {
     @PostMapping("/{id}/alimentar-ia")
     public ResponseEntity<UsuarioCltResponseDto> alimentarIa(
             @PathVariable Long id,
-            @RequestBody Object dadosIaPayload) { // Object usado para flexibilidade do exemplo JSON
+            @RequestBody Object dadosIaPayload) {
         log.info("Requisição recebida para alimentar IA do Usuario CLT ID: {}", id);
         return ResponseEntity.ok(usuarioCltService.alimentarIa(id, dadosIaPayload));
+    }
+
+    @Operation(summary = "Buscar Usuário por ID", description = "Retorna os detalhes de um usuário CLT específico.")
+    @ApiResponse(responseCode = "200", description = "OK")
+    @ApiResponse(responseCode = "404", description = "Not Found - Usuário não encontrado")
+    @GetMapping("/{id}")
+    public ResponseEntity<UsuarioCltResponseDto> buscarPorId(
+            @Parameter(description = "ID do usuário") @PathVariable Long id) {
+        log.info("Requisição recebida para buscar Usuario CLT ID: {}", id);
+        UsuarioCltResponseDto response = usuarioCltService.buscarPorId(id);
+        return ResponseEntity.ok(response);
     }
 }

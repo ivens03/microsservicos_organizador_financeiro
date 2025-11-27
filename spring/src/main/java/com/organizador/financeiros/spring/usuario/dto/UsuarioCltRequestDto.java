@@ -3,7 +3,6 @@ package com.organizador.financeiros.spring.usuario.dto;
 import io.swagger.v3.oas.annotations.media.Schema;
 import jakarta.validation.Valid;
 import jakarta.validation.constraints.DecimalMin;
-import jakarta.validation.constraints.Min;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 import lombok.Data;
@@ -22,11 +21,6 @@ public class UsuarioCltRequestDto {
     @DecimalMin(value = "0.0", inclusive = false)
     @Schema(example = "4500.50")
     private BigDecimal salarioMensal;
-
-    @NotNull
-    @Min(value = 14, message = "Idade mínima permitida é 14 anos")
-    @Schema(example = "28")
-    private Byte idade;
 
     @NotBlank
     @Schema(example = "12345678900")

@@ -11,6 +11,7 @@ import org.hibernate.annotations.CreationTimestamp;
 import org.hibernate.annotations.UpdateTimestamp;
 
 import java.io.Serializable;
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 
 @Data
@@ -32,6 +33,9 @@ public class Usuario implements Serializable {
 
     @Column(nullable = false)
     private String senha;
+
+    @Column(name = "data_nascimento", nullable = false)
+    private LocalDate dataNascimento;
 
     @Enumerated(EnumType.STRING)
     @Column(name = "tipo_usuario", nullable = false)

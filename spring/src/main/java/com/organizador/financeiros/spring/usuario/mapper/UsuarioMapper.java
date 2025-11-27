@@ -5,6 +5,9 @@ import com.organizador.financeiros.spring.usuario.dto.UsuarioResponseDto;
 import com.organizador.financeiros.spring.usuario.model.Usuario;
 import org.springframework.stereotype.Component;
 
+import java.time.LocalDate;
+import java.time.Period;
+
 @Component
 public class UsuarioMapper {
 
@@ -13,11 +16,14 @@ public class UsuarioMapper {
         Usuario entity = new Usuario();
         entity.setNome(dto.getNome());
         entity.setEmail(dto.getEmail());
-        entity.setSenha(dto.getSenha()); // Hash será aplicado no Service
+        entity.setSenha(dto.getSenha());
         entity.setTipoUsuario(dto.getTipoUsuario());
         entity.setAtivo(dto.getAtivo());
         entity.setEspectativas(dto.getEspectativas());
         entity.setPublico(dto.getPublico());
+
+        entity.setDataNascimento(dto.getDataNascimento());
+
         return entity;
     }
 
@@ -31,15 +37,27 @@ public class UsuarioMapper {
         dto.setAtivo(entity.getAtivo());
         dto.setEspectativas(entity.getEspectativas());
         dto.setPublico(entity.getPublico());
+
+        dto.setDataNascimento(entity.getDataNascimento());
+
+        if (entity.getDataNascimento() != null) {
+            int anos = Period.between(entity.getDataNascimento(), LocalDate.now()).getYears();
+            dto.setIdade((byte) anos);
+        }
+
         return dto;
     }
 
     public void updateEntityFromDto(UsuarioRequestDto dto, Usuario entity) {
         if (dto == null || entity == null) return;
+
         if (dto.getNome() != null) entity.setNome(dto.getNome());
-        // Email geralmente não se altera em update simples ou requer validação extra
         if (dto.getEspectativas() != null) entity.setEspectativas(dto.getEspectativas());
         if (dto.getPublico() != null) entity.setPublico(dto.getPublico());
-        // Senha deve ser tratada separadamente
+
+        if (dto.getDataNascimento() != null) {
+            entity.setDataNascimento(dto.getDataNascimento());
+        }
+
     }
 }

@@ -1,6 +1,8 @@
-package com.organizador.financeiros.spring.usuario.advice;
+package com.organizador.financeiros.spring.config.globalException;
 
 
+import com.organizador.financeiros.spring.config.globalException.exceotion.BadRequestException;
+import com.organizador.financeiros.spring.config.globalException.exceotion.ResourceNotFoundException;
 import jakarta.validation.ConstraintViolationException;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;

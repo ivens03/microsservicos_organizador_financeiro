@@ -1,4 +1,4 @@
-package com.organizador.financeiros.spring.usuario.advice;
+package com.organizador.financeiros.spring.config.globalException.exceotion;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.ResponseStatus;

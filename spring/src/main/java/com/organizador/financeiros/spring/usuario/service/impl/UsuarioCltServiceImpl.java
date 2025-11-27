@@ -2,6 +2,7 @@ package com.organizador.financeiros.spring.usuario.service.impl;
 
 import com.organizador.financeiros.spring.usuario.dto.UsuarioCltRequestDto;
 import com.organizador.financeiros.spring.usuario.dto.UsuarioCltResponseDto;
+import com.organizador.financeiros.spring.usuario.enums.TipoUsuarioEnum;
 import com.organizador.financeiros.spring.usuario.mapper.UsuarioCltMapper;
 import com.organizador.financeiros.spring.usuario.mapper.UsuarioMapper;
 import com.organizador.financeiros.spring.usuario.model.Usuario;
@@ -11,11 +12,13 @@ import com.organizador.financeiros.spring.usuario.repository.UsuarioRepository;
 import com.organizador.financeiros.spring.usuario.service.UsuarioCltService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
-import com.organizador.financeiros.spring.usuario.advice.BadRequestException;
-import com.organizador.financeiros.spring.usuario.advice.ResourceNotFoundException;
+import com.organizador.financeiros.spring.config.globalException.exceotion.BadRequestException;
+import com.organizador.financeiros.spring.config.globalException.exceotion.ResourceNotFoundException;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+
+import java.time.LocalDateTime;
 
 @Slf4j
 @Service
@@ -43,15 +46,15 @@ public class UsuarioCltServiceImpl implements UsuarioCltService {
             throw new BadRequestException("CPF já cadastrado no sistema.");
         }
 
-        // 1. Prepara Usuário Base
         Usuario usuario = usuarioMapper.toEntity(dto.getUsuario());
         usuario.setSenha(passwordEncoder.encode(dto.getUsuario().getSenha()));
+        usuario.setAtivo(true);
+        usuario.setTipoUsuario(TipoUsuarioEnum.CLT);
+        usuario.setCriadoEm(LocalDateTime.now());
 
-        // 2. Prepara Perfil CLT e vincula
         UsuarioClt usuarioClt = usuarioCltMapper.toEntity(dto);
-        usuarioClt.setUsuario(usuario); // @MapsId vai usar o ID do usuário ao persistir
+        usuarioClt.setUsuario(usuario);
 
-        // 3. Salva (Cascade ALL salvará o usuário também)
         usuarioClt = usuarioCltRepository.save(usuarioClt);
 
         log.info("Usuário CLT criado com sucesso. ID: {}", usuarioClt.getId());
@@ -75,7 +78,6 @@ public class UsuarioCltServiceImpl implements UsuarioCltService {
         UsuarioClt usuarioClt = usuarioCltRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário CLT não encontrado para edição."));
 
-        // Verifica unicidade de email se foi alterado
         if (!usuarioClt.getUsuario().getEmail().equals(dto.getUsuario().getEmail()) &&
                 usuarioRepository.existsByEmail(dto.getUsuario().getEmail())) {
             throw new BadRequestException("Novo email já está em uso.");
@@ -83,7 +85,6 @@ public class UsuarioCltServiceImpl implements UsuarioCltService {
 
         usuarioCltMapper.updateEntityFromDto(dto, usuarioClt);
 
-        // Se a senha foi enviada, criptografa novamente
         if (dto.getUsuario().getSenha() != null && !dto.getUsuario().getSenha().isBlank()) {
             usuarioClt.getUsuario().setSenha(passwordEncoder.encode(dto.getUsuario().getSenha()));
         }

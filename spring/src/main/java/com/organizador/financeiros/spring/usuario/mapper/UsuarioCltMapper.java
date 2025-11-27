@@ -18,9 +18,7 @@ public class UsuarioCltMapper {
         if (dto == null) return null;
         UsuarioClt entity = new UsuarioClt();
 
-        // O vínculo do usuário será feito no Service
         entity.setSalarioMensal(dto.getSalarioMensal());
-        entity.setIdade(dto.getIdade());
         entity.setCpf(dto.getCpf());
         entity.setEmpresa(dto.getEmpresa());
         entity.setFilhos(dto.getFilhos());
@@ -35,7 +33,6 @@ public class UsuarioCltMapper {
         UsuarioCltResponseDto dto = new UsuarioCltResponseDto();
         dto.setUsuario(usuarioMapper.toResponseDto(entity.getUsuario()));
         dto.setSalarioMensal(entity.getSalarioMensal());
-        dto.setIdade(entity.getIdade());
         dto.setCpf(entity.getCpf());
         dto.setEmpresa(entity.getEmpresa());
         dto.setFilhos(entity.getFilhos());
@@ -47,17 +44,14 @@ public class UsuarioCltMapper {
     public void updateEntityFromDto(UsuarioCltRequestDto dto, UsuarioClt entity) {
         if (dto == null || entity == null) return;
 
-        // Atualiza dados do usuário base
         if (dto.getUsuario() != null) {
             usuarioMapper.updateEntityFromDto(dto.getUsuario(), entity.getUsuario());
         }
 
         if (dto.getSalarioMensal() != null) entity.setSalarioMensal(dto.getSalarioMensal());
-        if (dto.getIdade() != null) entity.setIdade(dto.getIdade());
         if (dto.getEmpresa() != null) entity.setEmpresa(dto.getEmpresa());
         if (dto.getFilhos() != null) entity.setFilhos(dto.getFilhos());
         if (dto.getMoraSo() != null) entity.setMoraSo(dto.getMoraSo());
         if (dto.getPossiReservaDeEnergencia() != null) entity.setPossiReservaDeEnergencia(dto.getPossiReservaDeEnergencia());
-        // CPF geralmente não se altera
     }
 }
