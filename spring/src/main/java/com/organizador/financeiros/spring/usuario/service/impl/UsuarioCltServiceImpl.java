@@ -1,5 +1,6 @@
 package com.organizador.financeiros.spring.usuario.service.impl;
 
+import com.organizador.financeiros.spring.config.security.PrivilegeEscalationGuard;
 import com.organizador.financeiros.spring.usuario.dto.UsuarioCltRequestDto;
 import com.organizador.financeiros.spring.usuario.dto.UsuarioCltResponseDto;
 import com.organizador.financeiros.spring.usuario.enums.TipoUsuarioEnum;
@@ -30,6 +31,7 @@ public class UsuarioCltServiceImpl implements UsuarioCltService {
     private final UsuarioCltMapper usuarioCltMapper;
     private final UsuarioMapper usuarioMapper;
     private final PasswordEncoder passwordEncoder;
+    private final PrivilegeEscalationGuard privilegeGuard;
 
     @Override
     @Transactional
@@ -92,11 +94,13 @@ public class UsuarioCltServiceImpl implements UsuarioCltService {
         UsuarioClt usuarioClt = usuarioCltRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Usuário CLT não encontrado para edição."));
 
+        // 1. Validação de usuário ativo
         if (Boolean.FALSE.equals(usuarioClt.getUsuario().getAtivo())) {
             log.warn("Bloqueio de edição: Usuário ID {} está inativo.", id);
             throw new BadRequestException("Não é permitido editar um usuário inativo. Ative-o primeiro.");
         }
 
+        // 2. Validação de Email duplicado
         if (dto.getUsuario() != null && dto.getUsuario().getEmail() != null) {
             String novoEmail = dto.getUsuario().getEmail();
             String emailAtual = usuarioClt.getUsuario().getEmail();
@@ -107,9 +111,16 @@ public class UsuarioCltServiceImpl implements UsuarioCltService {
             }
         }
 
+        // 3. ALTERAÇÃO INSERIDA: Prevenção de Escalonamento de Privilégios
+        // Garante que ninguém consiga virar ADM através deste endpoint
+        privilegeGuard.validateNoEscalation(id, dto.getUsuario());
+
+        // 4. Aplicação das alterações (Mapper)
         log.debug("Aplicando alterações parciais na entidade via Mapper.");
+        // Agora é seguro chamar o mapper, pois já garantimos que não é uma promoção para ADM
         usuarioCltMapper.updateEntityFromDto(dto, usuarioClt);
 
+        // 5. Atualização de Senha (se enviada)
         if (dto.getUsuario() != null &&
                 dto.getUsuario().getSenha() != null &&
                 !dto.getUsuario().getSenha().isBlank()) {

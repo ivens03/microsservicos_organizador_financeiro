@@ -59,5 +59,8 @@ public class UsuarioMapper {
             entity.setDataNascimento(dto.getDataNascimento());
         }
 
+        if (dto.getTipoUsuario() != null) {
+            entity.setTipoUsuario(dto.getTipoUsuario());
+        }
     }
 }
