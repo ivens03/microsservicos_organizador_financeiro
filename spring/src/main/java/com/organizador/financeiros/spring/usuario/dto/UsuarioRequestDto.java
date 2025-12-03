@@ -1,5 +1,8 @@
 package com.organizador.financeiros.spring.usuario.dto;
 
+import com.fasterxml.jackson.annotation.JsonFormat;
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
 import com.organizador.financeiros.spring.usuario.dto.validation.OnCreate;
 import com.organizador.financeiros.spring.usuario.dto.validation.OnUpdate;
 import com.organizador.financeiros.spring.usuario.enums.PublicoEnum;
@@ -12,6 +15,8 @@ import java.time.LocalDate;
 
 @Data
 @Schema(description = "Dados para criação (obrigatórios) ou edição (parciais)")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UsuarioRequestDto {
 
     @NotBlank(message = "Nome é obrigatório", groups = OnCreate.class)
@@ -31,6 +36,7 @@ public class UsuarioRequestDto {
     @NotNull(message = "Data de nascimento é obrigatória", groups = OnCreate.class)
     @Past(message = "Data de nascimento deve ser no passado", groups = {OnCreate.class, OnUpdate.class})
     @Schema(example = "1995-10-25", type = "string", format = "date")
+    @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyy-MM-dd")
     private LocalDate dataNascimento;
 
     @Schema(example = "CLT")

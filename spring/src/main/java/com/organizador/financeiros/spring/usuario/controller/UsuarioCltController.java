@@ -31,7 +31,7 @@ public class UsuarioCltController {
     @ApiResponse(responseCode = "400", description = "Bad Request - Dados inválidos ou duplicados")
     @PostMapping
     public ResponseEntity<UsuarioCltResponseDto> criar(@Validated(OnCreate.class) @RequestBody UsuarioCltRequestDto dto) {
-        log.info("Requisição recebida para criar Usuario CLT.");
+        log.info("POST /API/CLT/usuario - Payload recebido para CPF: {}, Email: {}", dto.getCpf(), dto.getUsuario().getEmail());
         UsuarioCltResponseDto response = usuarioCltService.criar(dto);
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
