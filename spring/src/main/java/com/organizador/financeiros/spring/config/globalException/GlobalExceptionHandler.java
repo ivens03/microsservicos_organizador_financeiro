@@ -2,6 +2,7 @@ package com.organizador.financeiros.spring.config.globalException;
 
 
 import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
 import com.fasterxml.jackson.databind.exc.InvalidFormatException;
 import com.fasterxml.jackson.databind.exc.MismatchedInputException;
@@ -12,7 +13,6 @@ import jakarta.validation.ConstraintViolationException;
 import lombok.Builder;
 import lombok.Data;
 import lombok.extern.slf4j.Slf4j;
-import org.springframework.boot.json.JsonParseException;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.HttpMessageNotReadableException;
@@ -23,46 +23,71 @@ import org.springframework.web.bind.annotation.ControllerAdvice;
 import org.springframework.web.bind.annotation.ExceptionHandler;
 
 import java.time.LocalDateTime;
-import java.util.*;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.List;
 import java.util.stream.Collectors;
 
 @Slf4j
 @ControllerAdvice
 public class GlobalExceptionHandler {
 
+    // 1. Validação de DTO (@Valid)
     @ExceptionHandler(MethodArgumentNotValidException.class)
     public ResponseEntity<ErrorResponse> handleValidationErrors(MethodArgumentNotValidException ex, HttpServletRequest request) {
         BindingResult result = ex.getBindingResult();
         List<String> details = new ArrayList<>();
-
         for (FieldError error : result.getFieldErrors()) {
             details.add(error.getField() + ": " + error.getDefaultMessage());
         }
-
         log.warn("Falha de validação em {}: {}", request.getRequestURI(), details);
         return buildResponse(HttpStatus.BAD_REQUEST, "Erro de validação nos campos", details);
     }
 
+    // 2. Validação de Constraints (ex: @Validated no controller)
+    @ExceptionHandler(ConstraintViolationException.class)
+    public ResponseEntity<ErrorResponse> handleConstraintViolation(ConstraintViolationException ex, HttpServletRequest request) {
+        List<String> details = ex.getConstraintViolations().stream()
+                .map(violation -> violation.getPropertyPath() + ": " + violation.getMessage())
+                .collect(Collectors.toList());
+        log.warn("Violação de constraint em {}: {}", request.getRequestURI(), details);
+        return buildResponse(HttpStatus.BAD_REQUEST, "Dados inválidos", details);
+    }
+
+    // 3. Erros de Parsing JSON (Jackson)
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleJsonErrors(HttpMessageNotReadableException ex, HttpServletRequest request) {
         Throwable cause = ex.getCause();
-        String message = "Requisição malformada ou tipo de dado inválido";
+        String message = "Requisição malformada";
         List<String> details = new ArrayList<>();
 
         if (cause instanceof InvalidFormatException ife) {
+            // Tipo de dado errado (ex: String onde esperava Integer, Enum inválido)
             details.add(handleInvalidFormat(ife));
-        } else if (cause instanceof JsonParseException) {
+            message = "Tipo de dado inválido";
+        } else if (cause instanceof JsonParseException jpe) {
+            // JSON Sintaticamente errado
             message = "JSON malformado";
-            details.add("Erro de sintaxe no JSON. Verifique vírgulas, aspas e chaves.");
+            details.add("Erro de sintaxe no JSON próximo à linha " + jpe.getLocation().getLineNr() +
+                    ", coluna " + jpe.getLocation().getColumnNr());
         } else if (cause instanceof MismatchedInputException mie) {
+            // Estrutura errada (ex: array no lugar de objeto)
             String path = extractFieldPath(mie.getPath());
-            details.add("Tipo de dado incompatível no campo '" + path + "'.");
+            details.add("Estrutura inválida no campo '" + path + "'. Verifique o tipo de dado esperado.");
         } else {
-            details.add(ex.getMessage().split(";")[0]); // Pega apenas a primeira parte da msg técnica
+            // Fallback
+            details.add("Corpo da requisição ilegível ou ausente.");
         }
 
         log.warn("Erro de leitura JSON em {}: {}", request.getRequestURI(), details);
         return buildResponse(HttpStatus.BAD_REQUEST, message, details);
+    }
+
+    // 4. Exceções de Negócio
+    @ExceptionHandler(BadRequestException.class)
+    public ResponseEntity<ErrorResponse> handleBadRequest(BadRequestException ex, HttpServletRequest request) {
+        log.warn("Regra de negócio violada em {}: {}", request.getRequestURI(), ex.getMessage());
+        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
     }
 
     @ExceptionHandler(ResourceNotFoundException.class)
@@ -71,19 +96,14 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.NOT_FOUND, ex.getMessage(), null);
     }
 
-    @ExceptionHandler({BadRequestException.class, ConstraintViolationException.class})
-    public ResponseEntity<ErrorResponse> handleBadRequest(Exception ex, HttpServletRequest request) {
-        log.warn("Regra de negócio violada em {}: {}", request.getRequestURI(), ex.getMessage());
-        return buildResponse(HttpStatus.BAD_REQUEST, ex.getMessage(), null);
-    }
-
+    // 5. Erro Interno (500)
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponse> handleGeneralException(Exception ex, HttpServletRequest request) {
-        log.error("Erro interno não tratado em " + request.getRequestURI(), ex);
-        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Ocorreu um erro interno no servidor.", List.of("Contate o suporte."));
+        log.error("Erro interno inesperado em " + request.getRequestURI(), ex);
+        return buildResponse(HttpStatus.INTERNAL_SERVER_ERROR, "Ocorreu um erro interno no servidor.", List.of("Contate o suporte com o horário do erro."));
     }
 
-    // --- Métodos Auxiliares --- //
+    // --- Helpers ---
 
     private String handleInvalidFormat(InvalidFormatException ex) {
         String path = extractFieldPath(ex.getPath());
@@ -94,13 +114,14 @@ public class GlobalExceptionHandler {
             String validValues = Arrays.toString(targetType.getEnumConstants());
             return String.format("%s: valor '%s' inválido. Valores aceitos: %s", path, invalidValue, validValues);
         }
-
-        if (targetType.getSimpleName().equals("Boolean")) {
+        if (targetType.getSimpleName().equalsIgnoreCase("Boolean")) {
             return String.format("%s: valor '%s' inválido. Boolean esperado: true ou false.", path, invalidValue);
         }
-
-        if (targetType.getSimpleName().equals("LocalDate") || targetType.getSimpleName().equals("LocalDateTime")) {
-            return String.format("%s: valor '%s' não pôde ser convertido. Formato esperado: yyyy-MM-dd.", path, invalidValue);
+        if (Number.class.isAssignableFrom(targetType) || targetType.getSimpleName().equals("Byte")) {
+            return String.format("%s: valor '%s' não pôde ser convertido para número (%s).", path, invalidValue, targetType.getSimpleName());
+        }
+        if (targetType.getSimpleName().contains("Date") || targetType.getSimpleName().contains("Time")) {
+            return String.format("%s: valor '%s' inválido para data. Formato esperado: yyyy-MM-dd", path, invalidValue);
         }
 
         return String.format("%s: valor '%s' inválido para o tipo %s.", path, invalidValue, targetType.getSimpleName());
@@ -108,7 +129,7 @@ public class GlobalExceptionHandler {
 
     private String extractFieldPath(List<JsonMappingException.Reference> references) {
         return references.stream()
-                .map(ref -> ref.getFieldName() != null ? ref.getFieldName() : "[index]")
+                .map(ref -> ref.getFieldName() != null ? ref.getFieldName() : "[]")
                 .collect(Collectors.joining("."));
     }
 
@@ -125,12 +146,12 @@ public class GlobalExceptionHandler {
 
     @Data
     @Builder
+    @JsonInclude(JsonInclude.Include.NON_NULL)
     public static class ErrorResponse {
         private LocalDateTime timestamp;
         private int status;
         private String error;
         private String message;
-        @JsonInclude(JsonInclude.Include.NON_NULL)
         private List<String> details;
     }
 }

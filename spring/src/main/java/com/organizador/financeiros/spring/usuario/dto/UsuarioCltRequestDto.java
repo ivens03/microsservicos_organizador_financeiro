@@ -1,5 +1,9 @@
 package com.organizador.financeiros.spring.usuario.dto;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
+import com.fasterxml.jackson.annotation.JsonInclude;
+import com.fasterxml.jackson.databind.annotation.JsonDeserialize;
+import com.organizador.financeiros.spring.config.globalException.ByteFlexibleDeserializer;
 import com.organizador.financeiros.spring.usuario.dto.validation.OnCreate;
 import com.organizador.financeiros.spring.usuario.dto.validation.OnUpdate;
 import com.organizador.financeiros.spring.usuario.enums.TipoUsuarioEnum;
@@ -15,6 +19,8 @@ import java.math.BigDecimal;
 
 @Data
 @Schema(description = "Dados para perfil CLT. No PATCH, envie apenas os campos que deseja alterar.")
+@JsonInclude(JsonInclude.Include.NON_NULL)
+@JsonIgnoreProperties(ignoreUnknown = true)
 public class UsuarioCltRequestDto {
 
     @Valid
@@ -37,6 +43,7 @@ public class UsuarioCltRequestDto {
     private String empresa;
 
     @Schema(example = "1")
+    @JsonDeserialize(using = ByteFlexibleDeserializer.class)
     private Byte filhos;
 
     @Schema(example = "false")
