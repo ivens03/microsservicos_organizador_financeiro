@@ -1,6 +1,5 @@
 package com.organizador.financeiros.spring.config.globalException;
 
-
 import com.fasterxml.jackson.annotation.JsonInclude;
 import com.fasterxml.jackson.core.JsonParseException;
 import com.fasterxml.jackson.databind.JsonMappingException;
@@ -54,23 +53,26 @@ public class GlobalExceptionHandler {
         return buildResponse(HttpStatus.BAD_REQUEST, "Dados inválidos", details);
     }
 
-    // 3. Erros de Parsing JSON (Jackson)
+    // 3. Erros de Parsing JSON (Jackson) - REFATORADO PARA COMPATIBILIDADE
     @ExceptionHandler(HttpMessageNotReadableException.class)
     public ResponseEntity<ErrorResponse> handleJsonErrors(HttpMessageNotReadableException ex, HttpServletRequest request) {
         Throwable cause = ex.getCause();
         String message = "Requisição malformada";
         List<String> details = new ArrayList<>();
 
-        if (cause instanceof InvalidFormatException ife) {
+        if (cause instanceof InvalidFormatException) {
+            InvalidFormatException ife = (InvalidFormatException) cause;
             // Tipo de dado errado (ex: String onde esperava Integer, Enum inválido)
             details.add(handleInvalidFormat(ife));
             message = "Tipo de dado inválido";
-        } else if (cause instanceof JsonParseException jpe) {
+        } else if (cause instanceof JsonParseException) {
+            JsonParseException jpe = (JsonParseException) cause;
             // JSON Sintaticamente errado
             message = "JSON malformado";
             details.add("Erro de sintaxe no JSON próximo à linha " + jpe.getLocation().getLineNr() +
                     ", coluna " + jpe.getLocation().getColumnNr());
-        } else if (cause instanceof MismatchedInputException mie) {
+        } else if (cause instanceof MismatchedInputException) {
+            MismatchedInputException mie = (MismatchedInputException) cause;
             // Estrutura errada (ex: array no lugar de objeto)
             String path = extractFieldPath(mie.getPath());
             details.add("Estrutura inválida no campo '" + path + "'. Verifique o tipo de dado esperado.");
